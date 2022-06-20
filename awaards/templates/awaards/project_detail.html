@@ -1,0 +1,89 @@
+{% extends 'base.html' %} {%load static%} {% block styles %} {{block.super}}
+<link rel="stylesheet" href="{% static 'css/project_detail.css' %}"> {% endblock %} {% block content %}
+<div class="card bg-dark text-white" id="banner">
+    {% if project.image %}
+    <img class="card-img" src="{{ project.image.url }}" alt="{{project.title}}" /> {%else%}
+    <img class="card-img" src="https://images.pond5.com/animated-sad-face-emoticon-black-footage-081533171_iconl.jpeg" alt=" Project Image unavailable" /> {%endif%}
+    <div class="card-img-overlay text-center">
+        {%if project.link%}
+        <p class="card-text"><strong><br> </strong><a href="{{project.link}} " class="live" target="blank">Go to Site <i class="fa fa-arrow-right icon" aria-hidden="true"></i></a></p>
+        {%else%}
+        <p class="text-white"><strong>Link to Live Site<br> </strong>Unavailable</p>
+        {%endif%}
+        <div class="row" id="totalVotes">
+            <div class="col-12">
+                <div id="totalVotes" class="d-flex justify-content-around align-items-center totalVotes flex-wrap">
+                    <p>Design <br><br><span class="voteDigits" style="color: #3EC1D3; border-color: #3EC1D3">{{total_design.design__avg|floatformat:2}}</span></p>
+                    <p>Usability <br><br><span class="voteDigits " style="color: #F6F7D7; border-color: #F6F7D7;">{{total_usability.usability__avg|floatformat:2}}</span></p>
+                    <p>Content <br><br><span class="voteDigits" style="color: #FF9A00; border-color: #FF9A00;">{{total_content.content__avg|floatformat:2}}</span></p>
+                    <p>Project Score <br><br><span class="voteDigits" id="total">{{total_score.score__avg|floatformat:2}}</span></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-2"></div>
+        <div class="col-sm-8">
+            <div class="card description">
+                <div class="card-body">
+                    <h5 class="card-title text-center"><strong>Project Details </h5>
+                    <p class="card-text"><strong>Posted by <br> </strong><a href="{%url% profile pk=profile.author.id}">@{{project.author.username}}</a></p>
+                        <p class="card-text"><strong>Title <br></strong>{{project.title|title}}</p>
+                        <p class="card-text"><strong>Description <br> </strong>{{project.description}}</p>
+                        <div class="d-flex justify-content-around">
+                            {%if project.author.id == user.id%}
+                            <a class="btn btn-info" href="{%url 'projectUpdate' pk=project.id%}" role="button">Update</a>
+                            <a class="btn btn-danger" href="{%url 'projectDelete' pk=project.id%}" role="button">Delete</a> {%else%}
+                            <a class="btn btn-warning" href="{%url 'rateNew' pk=project.id%}" role="button">Vote</a> {%endif%}
+                        </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-2"></div>
+
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-sm-1"></div>
+        <div class="col-sm-10">
+            <h2 class="text-center">Votes</h2>
+            {%for vote in votes%}
+            <div class="card voteCard">
+                <div class="row no-gutters">
+                    <div class="col-sm-3">
+                        <div class="d-flex justify-content-center">
+                            {% if vote.reviewer.profile.profile_photo %}
+                            <img id="pfp" src="{{ vote.reviewer.profile.profile_photo.url }}" alt=" Profile Photo" /> {%else%}
+                            <img id="pfp" src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png" alt=" Profile Photo" /> {%endif%}
+                        </div>
+                        <p class="card-text text-center"> <a class="username" href="{%url 'profile' pk=vote.reviewer.id%}"><strong>@{{vote.reviewer.username}}</strong></a>
+                        </p>
+                    </div>
+                    <div class="col-sm-9">
+                        <div class="card-body text-center">
+                            <div class="d-flex justify-content-around align-items-center">
+                                <p>Design <br><span class="voteDigit">{{vote.design}}</span></p>
+                                <p>Usability <br><span class="voteDigit">{{vote.usability}}</span></p>
+                                <p>Content <br><span class="voteDigit">{{vote.content}}</span></p>
+                                <p>Average Score <br><span class="voteDigit">{{vote.score}}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer view">
+                    <div class="d-flex justify-content-around">
+                        {%if vote.reviewer.id == user.id %}
+                        <a class="btn btn-info" href="{%url 'rateUpdate' pk=vote.id%}" role="button">Update</a>
+                        <a class="btn btn-danger" href="{%url 'rateDelete' pk=vote.id%}" role="button">Delete</a> {%else%} {%endif%}
+                    </div>
+                </div>
+            </div>
+            {%endfor%}
+        </div>
+        <div class="col-sm-1"></div>
+    </div>
+</div>
+{% endblock %}
