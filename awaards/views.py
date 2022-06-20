@@ -1,3 +1,182 @@
-from django.shortcuts import render
+from audioop import avg
+from django.http import Http404, HttpResponseRedirect
+from django.shortcuts import redirect, render
+from django.contrib.auth import login, authenticate
+from django.urls import reverse, reverse_lazy
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Avg
+from django.views import generic
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.renderers import TemplateHTMLRenderer
+from rest_framework import status,viewsets
+from .serializer import ProfileSerializer,ProjectSerializer
+from .forms import SignUpForm
+from .permissions import IsAuthenticatedOrReadOnly
+from .models import  *
 
-# Create your views here.
+
+def signup(request):
+    '''View function that signs up a new user'''
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            raw_password = form.cleaned_data.get('password1')
+            user = authenticate(username=username, password=raw_password)
+            login(request, user)
+            messages.success(request, "Your user account has been successfully created.")
+            return redirect(reverse('homepage'))
+    else:
+        form = SignUpForm()
+        
+    title = 'Create New Account'
+    context={
+        'title': title,
+        'form': form,
+        }
+    return render(request, 'registration/signup.html', context)
+
+def homepage(request):
+    return render(request, 'homepage.html')
+
+def search_results(request):
+    
+    if 'project' in request.GET and request.GET["project"]:
+        search_term = request.GET.get("project")
+        project_list = Project.objects.filter(title__icontains=search_term)
+        return render(request, 'search_results.html', {"project_list":project_list})
+    else:
+        message = "You haven't searched for any term"
+        return render(request, 'search_results.html',{"message":message})
+
+#PROFILE LOGIC
+class ProfileListView(generic.ListView):
+    model=Profile
+    
+class ProfileDetailView(generic.DetailView):
+    model = Profile
+    def get_context_data(self, **kwargs):
+        context = super(ProfileDetailView, self).get_context_data(**kwargs)
+        context['projects'] = Project.objects.filter(author=self.object.user).all()
+        return context
+    
+class ProfileUpdateView(LoginRequiredMixin ,generic.UpdateView):
+    login_url='/login/'
+    model = Profile
+  
+    fields = [
+        "profile_photo",
+        "bio",
+        "phone_number"
+    ]
+    
+#PROJECT LOGIC
+class ProjectCreateView(LoginRequiredMixin,generic.CreateView):
+    login_url='/login/'
+
+    model = Project
+    fields = ['image','title', 'description','link']
+    def get_success_url(self):
+        return reverse('profile', kwargs={'pk': self.object.author.id})
+    
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super(ProjectCreateView, self).form_valid(form)
+
+class ProjectListView(generic.ListView):
+    model=Project
+    def get_context_data(self,**kwargs):
+        context = super(ProjectListView,self).get_context_data(**kwargs)
+        return context
+    
+
+class ProjectDetailView(generic.DetailView):
+    model = Project
+    def get_context_data(self, **kwargs):
+        context = super(ProjectDetailView, self).get_context_data(**kwargs)
+        context['votes'] = Rate.objects.filter(rated_project=self.object.pk).all()
+        context['total_design'] = Rate.objects.filter(rated_project=self.object.pk).all().aggregate(Avg('design'))
+        context['total_usability'] = Rate.objects.filter(rated_project=self.object.pk).all().aggregate(Avg('usability'))
+        context['total_content'] = Rate.objects.filter(rated_project=self.object.pk).all().aggregate(Avg('content'))
+        context['total_score'] = Rate.objects.filter(rated_project=self.object.pk).all().aggregate(Avg('score'))
+        print(Rate.objects.filter(rated_project=self.object.pk).all().aggregate(Avg('score')))
+        return context
+
+class ProjectUpdateView(LoginRequiredMixin,generic.UpdateView):
+    login_url='/login/'
+    model = Project
+    fields = [
+        "title",
+        "description",
+        "image",
+        "link"
+    ]
+    def get_success_url(self):
+        return reverse('project', kwargs={'pk': self.object.pk})
+    
+class ProjectDeleteView(LoginRequiredMixin,generic.DeleteView):
+    login_url='/login/'
+    model = Project
+     
+    def get_success_url(self):
+        return reverse('profile', kwargs={'pk': self.request.user.id})
+
+
+#RATE LOGIC
+class RateCreateView(LoginRequiredMixin,generic.CreateView):
+    login_url='/login/'
+    model = Rate
+    fields = ['design','usability', 'content']
+    def get_success_url(self):
+        return reverse('project', kwargs={'pk': self.object.rated_project.pk})
+    
+    def form_valid(self, form):
+        form.instance.rated_project = Project.objects.get(id=self.kwargs.get('pk'))
+        form.instance.reviewer = self.request.user
+        form.instance.score = (form.instance.design+form.instance.usability+form.instance.content)/3
+        return super(RateCreateView, self).form_valid(form)
+class RateUpdateView(LoginRequiredMixin,generic.UpdateView):
+    login_url='/login/'
+    model = Rate
+    
+    fields = ['design','usability', 'content']
+    def get_success_url(self):
+        return reverse('project', kwargs={'pk': self.object.rated_project.pk})
+
+    def form_valid(self, form):
+        form.instance.score = (form.instance.design+form.instance.usability+form.instance.content)/3
+        return super(RateUpdateView, self).form_valid(form)
+class RateDeleteView(LoginRequiredMixin,generic.DeleteView):
+    login_url='/login/'
+    model = Rate
+     
+    def get_success_url(self):
+        return reverse('project', kwargs={'pk': self.object.rated_project.id})
+
+
+
+#API LOGIC
+class ProfileViewSet(viewsets.ModelViewSet):
+    """
+    This viewset automatically provides `list` and `retrieve` actions.
+    """
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly,]
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    """
+    This viewset automatically provides `list` and `retrieve` actions.
+    """
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly,]
+    
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
