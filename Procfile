@@ -1,3 +1,3 @@
 
-web: gunicorn developer_awards.wsgi --log-file -
+web: gunicorn awaardsprj.wsgi --log-file -
 

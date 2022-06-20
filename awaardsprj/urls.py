@@ -23,5 +23,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('django.contrib.auth.urls')),
     path('api-token-auth/', views.obtain_auth_token, name='api-token-auth'),
-    path('',include('awards.urls')),
+    path('',include('awaards.urls')),
 ]
