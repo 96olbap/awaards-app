@@ -25,6 +25,8 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 # DATABASES
 
+#  *** TO RUN ON LOCAL SERVER ***
+
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
@@ -34,6 +36,8 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 #     }
 # }
 
+#  *** TO RUN DURING DEPLOYMENT ***
+ 
 # development
 if config('MODE')=="dev":
    DATABASES = {
