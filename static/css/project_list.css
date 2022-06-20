@@ -1,0 +1,16 @@
+img {
+    width: 100%;
+    object-fit: cover;
+    object-position: center;
+    height: auto;
+    vertical-align: center;
+    background-color: grey;
+}
+
+.imgColumn {
+    background-color: grey;
+}
+
+.projectCard {
+    margin: 2em;
+}
