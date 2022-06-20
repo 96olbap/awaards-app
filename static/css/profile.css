@@ -1,0 +1,12 @@
+.projectImage {
+    width: 100%;
+    object-fit: cover;
+    object-position: center;
+    height: 25rem;
+}
+
+#add {
+    border-radius: 50%;
+    border: 0.3em solid green;
+    margin-top: 1em;
+}
